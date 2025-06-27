@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>LLaMA 챗봇</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f9f9f9; }
+    #chatbox { border: 1px solid #ccc; padding: 10px; height: 400px; overflow-y: scroll; background: #fff; }
+    .msg { margin: 5px 0; }
+    .user { color: blue; font-weight: bold; }
+    .bot { color: green; font-weight: bold; }
+    .btn { margin: 2px; padding: 5px 10px; }
+  </style>
+</head>
+<body>
+  <h1>🤖 LLaMA 웹 챗봇</h1>
+
+  <div>
+    <label>🧠 역할 선택: </label>
+    <button class="btn" onclick="setRole('default')">한국인</button>
+    <button class="btn" onclick="setRole('friend')">친구</button>
+    <button class="btn" onclick="setRole('foreign')">외국인</button>
+    <button class="btn" onclick="setRole('developer')">개발자</button>
+  </div>
+
+  <div>
+    <label>📄 요약 모드: </label>
+    <input type="checkbox" id="summarizeToggle" onchange="toggleSummarize()" />
+  </div>
+
+  <!-- ✅ RAG 체크박스 추가 -->
+  <div>
+    <label>📚 RAG 사용: </label>
+    <input type="checkbox" id="ragToggle" onchange="toggleRAG()" />
+  </div>
+
+  <div id="chatbox"></div>
+
+  <input type="text" id="input" placeholder="메시지를 입력하세요..." style="width: 80%;" />
+  <button onclick="sendMessage()">보내기</button>
+
+  <script>
+    const chatbox = document.getElementById("chatbox");
+    const input = document.getElementById("input");
+    let history = [];
+    let role = "default";
+    let summarize = false;
+    let rag = false; // ✅ RAG 상태 변수
+
+    function setRole(r) {
+      role = r;
+      chatbox.innerHTML += `<div class="msg"><em>💡 역할이 '${r}'로 변경되었습니다.</em></div>`;
+    }
+
+    function toggleSummarize() {
+      summarize = document.getElementById("summarizeToggle").checked;
+      const status = summarize ? "ON" : "OFF";
+      chatbox.innerHTML += `<div class="msg"><em>📄 요약 모드가 ${status} 상태입니다.</em></div>`;
+    }
+
+    function toggleRAG() {
+      rag = document.getElementById("ragToggle").checked;
+      const status = rag ? "ON" : "OFF";
+      chatbox.innerHTML += `<div class="msg"><em>📚 RAG 모드가 ${status} 상태입니다.</em></div>`;
+    }
+
+    async function sendMessage() {
+      const message = input.value;
+      if (!message) return;
+
+      chatbox.innerHTML += `<div class="msg user">👤 나: ${message}</div>`;
+      chatbox.scrollTop = chatbox.scrollHeight;
+      input.value = "";
+
+      const response = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message, history, role, summarize, rag })  // ✅ RAG 포함
+      });
+
+      const data = await response.json();
+      chatbox.innerHTML += `<div class="msg bot">🤖 챗봇: ${data.response}</div>`;
+      chatbox.scrollTop = chatbox.scrollHeight;
+
+      history.push({ role: "user", content: message });
+      history.push({ role: "assistant", content: data.response });
+    }
+
+    input.addEventListener("keyup", (e) => {
+      if (e.key === "Enter") sendMessage();
+    });
+  </script>
+</body>
+</html>
